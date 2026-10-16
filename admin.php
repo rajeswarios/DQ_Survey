@@ -16,18 +16,32 @@ function password_ok(string $stored,string $given):bool{
 
 if(isset($_POST['logout'])){$_SESSION=[];session_destroy();header('Location: admin.php');exit;}
 
+// Failed-login lockout is tracked per client IP on disk, so dropping the session cookie does not reset it.
+function lock_file():string{return __DIR__.'/data/login_attempts.json';}
+function lock_update(string $ip,?string $action):int{
+    $fp=@fopen(lock_file(),'c+');if(!$fp)return 0;
+    flock($fp,LOCK_EX);$d=json_decode((string)stream_get_contents($fp),true);if(!is_array($d))$d=[];
+    $now=time();foreach($d as $k=>$v){if(($v['lock_until']??0)<$now&&($v['last']??0)<$now-3600)unset($d[$k]);}
+    $e=$d[$ip]??['tries'=>0,'lock_until'=>0,'last'=>0];
+    if($action==='fail'){$e['last']=$now;if(++$e['tries']>=5){$e['tries']=0;$e['lock_until']=$now+60;}}
+    elseif($action==='ok'){unset($d[$ip]);$e=null;}
+    if($e!==null)$d[$ip]=$e;
+    if($action!==null){ftruncate($fp,0);rewind($fp);fwrite($fp,json_encode($d));fflush($fp);}
+    flock($fp,LOCK_UN);fclose($fp);
+    return max(0,(int)($e['lock_until']??0)-$now);
+}
+$ip=(string)($_SERVER['REMOTE_ADDR']??'unknown');
 $error='';
 if(isset($_POST['password'])){
-    $_SESSION['tries']=(int)($_SESSION['tries']??0);
-    $_SESSION['lock_until']=(int)($_SESSION['lock_until']??0);
-    if(time()<$_SESSION['lock_until']){
+    if(lock_update($ip,null)>0){
         $error='Too many attempts. Please wait a minute and try again.';
     }elseif(password_ok((string)$config['admin_password'],(string)$_POST['password'])){
+        lock_update($ip,'ok');
         session_regenerate_id(true);$_SESSION=['survey_admin'=>true];
         header('Location: admin.php');exit;
     }else{
         usleep(400000);
-        if(++$_SESSION['tries']>=5){$_SESSION['tries']=0;$_SESSION['lock_until']=time()+60;}
+        lock_update($ip,'fail');
         $error='Incorrect password.';
     }
 }

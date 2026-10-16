@@ -8,7 +8,7 @@ The source presentation has one DQ overview slide. Its four sections and all 17 
 2. Ensure your server supports PHP 8.0+ (mbstring is recommended), and that PHP can write into `data/`. Use standard restricted directory permissions; avoid 777.
 3. Browse `https://yourdomain.com/dq-survey/` and submit one test response.
 4. View results at `https://yourdomain.com/dq-survey/admin.php`.
-5. Set your own strong password in `config.php` **before distributing** the survey link. Initial generated password: `hf4XnN4T-HR5A1vsdnG-8z6U4ko`
+5. Copy `config.sample.php` to `config.php` and set your own strong admin password and SMTP details **before distributing** the survey link. `config.php` is git-ignored; never commit it.
 6. Verify the `data/` folder is not browsable (HTTP 403 for `/dq-survey/data/responses.csv`). This package includes an Apache `.htaccess` rule for that. **If running nginx or another web server, configure equivalent access blocks before going live.**
 7. Use HTTPS; obtain any required client privacy/consent approvals. Responses contain contact information and should be retained/deleted per your organization's policy.
 

@@ -4,7 +4,8 @@ header('Content-Type: application/json; charset=utf-8');header('Cache-Control: n
 function respond(int $code,array $v):void{http_response_code($code);echo json_encode($v);exit;}
 if($_SERVER['REQUEST_METHOD']!=='POST')respond(405,['ok'=>false,'error'=>'Method not allowed']);
 if((int)($_SERVER['CONTENT_LENGTH']??0)>16000)respond(413,['ok'=>false,'error'=>'Submission is too large']);
-try{$r=json_decode(file_get_contents('php://input'),true,512,JSON_THROW_ON_ERROR);}catch(Throwable $e){respond(400,['ok'=>false,'error'=>'Invalid submission']);}
+$body=file_get_contents('php://input',false,null,0,16001);if($body===false||strlen($body)>16000)respond(413,['ok'=>false,'error'=>'Submission is too large']);
+try{$r=json_decode($body,true,512,JSON_THROW_ON_ERROR);}catch(Throwable $e){respond(400,['ok'=>false,'error'=>'Invalid submission']);}
 if(!is_array($r))respond(400,['ok'=>false,'error'=>'Invalid submission']);
 if(!empty($r['website']))respond(200,['ok'=>true,'overall'=>0,'level'=>'Thank you','dimensions'=>[]]);
 function clean($v,int $max):string{$s=trim(is_string($v)?$v:'');return function_exists('mb_substr')?mb_substr($s,0,$max):substr($s,0,$max);}
